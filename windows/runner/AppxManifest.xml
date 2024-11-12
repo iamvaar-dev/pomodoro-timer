@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
+  
+  <Identity Name="FocusForge"
+    ProcessorArchitecture="x64"
+    Publisher="CN=YourName"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Focus Forge</DisplayName>
+    <PublisherDisplayName>Vaar</PublisherDisplayName>
+    <Description>Focus Timer App</Description>
+    <Logo>assets/logo.png</Logo>
+  </Properties>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust"/>
+    <Capability Name="internetClient"/>
+  </Capabilities>
+
+  <Applications>
+    <Application Id="FocusForge" Executable="focusforge.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Focus Forge"
+        Description="Focus Timer App"
+        BackgroundColor="transparent"
+        Square150x150Logo="assets/logo.png"
+        Square44x44Logo="assets/logo.png" />
+    </Application>
+  </Applications>
+</Package> 
