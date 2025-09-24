@@ -19,11 +19,34 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   bool _autoStartWork = false;
   int _sessionsUntilLongBreak = 4;
   bool _isLoading = true;
+  
+  // Controllers for text fields to enable programmatic updates
+  late TextEditingController _workDurationController;
+  late TextEditingController _shortBreakDurationController;
+  late TextEditingController _longBreakDurationController;
+  late TextEditingController _sessionsController;
 
   @override
   void initState() {
     super.initState();
+    _initializeControllers();
     _loadSettings();
+  }
+  
+  void _initializeControllers() {
+    _workDurationController = TextEditingController(text: _workDuration.toString());
+    _shortBreakDurationController = TextEditingController(text: _shortBreakDuration.toString());
+    _longBreakDurationController = TextEditingController(text: _longBreakDuration.toString());
+    _sessionsController = TextEditingController(text: _sessionsUntilLongBreak.toString());
+  }
+  
+  @override
+  void dispose() {
+    _workDurationController.dispose();
+    _shortBreakDurationController.dispose();
+    _longBreakDurationController.dispose();
+    _sessionsController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -39,6 +62,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
           _sessionsUntilLongBreak = settings['sessionsUntilLongBreak'];
           _isLoading = false;
         });
+        
+        // Update controllers to reflect loaded values
+        _updateControllers();
       }
     } catch (e) {
       print('Error loading settings: $e');
@@ -46,6 +72,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         setState(() => _isLoading = false);
       }
     }
+  }
+  
+  void _updateControllers() {
+    _workDurationController.text = _workDuration.toString();
+    _shortBreakDurationController.text = _shortBreakDuration.toString();
+    _longBreakDurationController.text = _longBreakDuration.toString();
+    _sessionsController.text = _sessionsUntilLongBreak.toString();
   }
 
   Future<void> _saveSettings() async {
@@ -94,18 +127,21 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             'Work Duration (minutes)',
             _workDuration,
             (value) => setState(() => _workDuration = value),
+            controller: _workDurationController,
           ),
           const SizedBox(height: 16),
           _buildDurationField(
             'Short Break Duration (minutes)',
             _shortBreakDuration,
             (value) => setState(() => _shortBreakDuration = value),
+            controller: _shortBreakDurationController,
           ),
           const SizedBox(height: 16),
           _buildDurationField(
             'Long Break Duration (minutes)',
             _longBreakDuration,
             (value) => setState(() => _longBreakDuration = value),
+            controller: _longBreakDurationController,
           ),
           const SizedBox(height: 16),
           _buildDurationField(
@@ -114,6 +150,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             (value) => setState(() => _sessionsUntilLongBreak = value),
             min: 1,
             max: 10,
+            controller: _sessionsController,
           ),
           const SizedBox(height: 16),
           _buildSwitchField(
@@ -165,7 +202,22 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 if (confirm == true) {
                   await SettingsService.resetToDefaults();
                   
-                  // Immediately update the timer service
+                  // Update local state to reflect the reset values
+                  if (mounted) {
+                    setState(() {
+                      _workDuration = 25;
+                      _shortBreakDuration = 5;
+                      _longBreakDuration = 15;
+                      _autoStartBreak = true;
+                      _autoStartWork = true;
+                      _sessionsUntilLongBreak = 4;
+                    });
+                    
+                    // Update controllers to show changes instantly in UI
+                    _updateControllers();
+                  }
+                  
+                  // Update the timer service
                   final timerService = ref.read(timerServiceProvider.notifier);
                   timerService.updateSettings(
                     newWorkDuration: 25,
@@ -179,11 +231,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   // Reset the timer to initial state
                   timerService.resetTimer();
                   
-                  // Pop back to previous screen immediately
+                  // Show success message
                   if (mounted) {
-                    Navigator.of(context).pop();
-                    
-                    // Show snackbar on the main screen
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Settings reset to defaults'),
@@ -210,13 +259,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     ValueChanged<int> onChanged, {
     int? min,
     int? max,
+    TextEditingController? controller,
   }) {
     return TextFormField(
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
       ),
-      initialValue: value.toString(),
+      controller: controller,
       keyboardType: TextInputType.number,
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -248,4 +298,4 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       onChanged: onChanged,
     );
   }
-} 
+}
