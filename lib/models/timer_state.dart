@@ -22,8 +22,8 @@ class TimerState {
   bool get isBreakTime => isBreak;
   double get progress {
     if (totalDuration.inSeconds == 0) return 0.0;
-    // Progress should decrease from 1.0 to 0.0 as time passes
-    return currentDuration.inSeconds / totalDuration.inSeconds;
+    final elapsedSeconds = totalDuration.inSeconds - currentDuration.inSeconds;
+    return elapsedSeconds / totalDuration.inSeconds;
   }
 
   TimerState copyWith({
@@ -45,4 +45,4 @@ class TimerState {
       totalDuration: totalDuration ?? this.totalDuration,
     );
   }
-} 
+}

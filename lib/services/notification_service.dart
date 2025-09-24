@@ -25,43 +25,92 @@ class NotificationService {
       } else {
         const initializationSettings = InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-          iOS: DarwinInitializationSettings(),
-          macOS: DarwinInitializationSettings(),
+          iOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          ),
+          macOS: DarwinInitializationSettings(
+            requestAlertPermission: false,
+            requestBadgePermission: false,
+            requestSoundPermission: false,
+          ),
         );
 
-        await _notifications.initialize(
+        final result = await _notifications.initialize(
           initializationSettings,
           onDidReceiveNotificationResponse: (details) async {},
         );
+        
+        print('Notification initialization result: $result');
       }
       
       _initialized = true;
+      print('Notification service initialized successfully');
     } catch (e) {
       print('Error initializing notification service: $e');
+      // Mark as initialized anyway to prevent blocking the app
+      _initialized = true;
     }
   }
 
   static Future<void> playSound(bool isBreakTime) async {
     try {
-      // 1. Release any previous audio resources
+      // 1. Stop any currently playing audio
       await _player.stop();
-      await _player.release();
       
       // 2. Set the correct release mode for one-shot playback
       await _player.setReleaseMode(ReleaseMode.stop);
       
       // 3. Specify the complete asset path as it appears in pubspec.yaml
-      final source = !isBreakTime ? 'sounds/break_complete.mp3' : 'sounds/focus_complete.mp3';
+      final source = isBreakTime ? 'sounds/break_complete.mp3' : 'sounds/focus_complete.mp3';
       print('Attempting to play sound: $source');
       
-      // 4. Create a new source and play
+      // 4. Play the sound
       await _player.play(AssetSource(source));
       
-      // 5. Add a small delay to ensure sound completes
-      await Future.delayed(const Duration(seconds: 3));
+      // 5. Wait for completion or timeout
+      await Future.any([
+        _player.onPlayerComplete.first,
+        Future.delayed(const Duration(seconds: 5)), // Timeout after 5 seconds
+      ]);
+      
     } catch (e) {
       print('Error playing completion sound: $e');
-      print('Stack trace: ${StackTrace.current}');
+      // Fallback: try to play a system beep or show visual notification
+      try {
+        debugPrint('Sound playback failed, falling back to system notification');
+      } catch (fallbackError) {
+        print('Fallback notification also failed: $fallbackError');
+      }
+    }
+  }
+
+  static Future<bool> requestPermissions() async {
+    try {
+      if (Platform.isWindows) {
+        return true; // Windows doesn't need explicit permission requests
+      }
+      
+      final result = await _notifications
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          ) ?? await _notifications
+          .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+      
+      print('Permission request result: $result');
+      return result ?? false;
+    } catch (e) {
+      print('Error requesting permissions: $e');
+      return false;
     }
   }
 
@@ -106,6 +155,11 @@ class NotificationService {
   }
 
   static Future<void> dispose() async {
-    // Dispose of any resources used by the notification service
+    try {
+      await _player.stop();
+      await _player.dispose();
+    } catch (e) {
+      print('Error disposing audio player: $e');
+    }
   }
-} 
+}

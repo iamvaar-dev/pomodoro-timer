@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:bitsdojo_window/bitsdojo_window.dart';
 import '../widgets/settings_form.dart';
-import '../widgets/window_buttons.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -10,72 +8,115 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: WindowTitleBarBox(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.1),
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, size: 20),
-                  onPressed: () => Navigator.pop(context),
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(40, 40),
-                    padding: EdgeInsets.zero,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                    hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  ),
-                ),
-                Expanded(
-                  child: MoveWindow(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'FocusForge',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                const WindowButtons(),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              Theme.of(context).colorScheme.secondary.withOpacity(0.03),
+              Theme.of(context).colorScheme.tertiary.withOpacity(0.02),
             ],
           ),
-          padding: const EdgeInsets.all(24),
-          child: const SettingsForm(),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header section
+                  _buildHeader(context),
+                  const SizedBox(height: 32),
+                  
+                  // Settings content
+                  _buildSettingsContent(context),
+                  const SizedBox(height: 100), // Bottom padding for nav bar
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
-} 
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.settings,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Settings',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Customize your focus experience',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsContent(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const SettingsForm(),
+    );
+  }
+}

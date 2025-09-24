@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -5,56 +6,9 @@ import 'dart:io' show Platform;
 import '../services/stats_storage.dart';
 import '../services/notification_service.dart';
 import '../models/session_stats.dart';
+import '../models/timer_state.dart';
 import '../services/settings_service.dart';
-
-class TimerState {
-  final int completedSessions;
-  final Duration totalFocusTime;
-  final bool isRunning;
-  final Duration currentDuration;
-  final bool isBreak;
-  final bool isLongBreak;
-  final Duration totalDuration;
-
-  TimerState({
-    required this.completedSessions,
-    required this.totalFocusTime,
-    required this.isRunning,
-    required this.currentDuration,
-    required this.isBreak,
-    required this.isLongBreak,
-    required this.totalDuration,
-  });
-
-  int get minutes => currentDuration.inMinutes;
-  int get seconds => currentDuration.inSeconds % 60;
-  bool get isBreakTime => isBreak;
-  double get progress {
-    if (totalDuration.inSeconds == 0) return 0.0;
-    final elapsedSeconds = totalDuration.inSeconds - currentDuration.inSeconds;
-    return elapsedSeconds / totalDuration.inSeconds;
-  }
-
-  TimerState copyWith({
-    int? completedSessions,
-    Duration? totalFocusTime,
-    bool? isRunning,
-    Duration? currentDuration,
-    bool? isBreak,
-    bool? isLongBreak,
-    Duration? totalDuration,
-  }) {
-    return TimerState(
-      completedSessions: completedSessions ?? this.completedSessions,
-      totalFocusTime: totalFocusTime ?? this.totalFocusTime,
-      isRunning: isRunning ?? this.isRunning,
-      currentDuration: currentDuration ?? this.currentDuration,
-      isBreak: isBreak ?? this.isBreak,
-      isLongBreak: isLongBreak ?? this.isLongBreak,
-      totalDuration: totalDuration ?? this.totalDuration,
-    );
-  }
-}
+import '../services/desktop_overlay_service.dart';
 
 class TimerService extends StateNotifier<TimerState> {
   Timer? _timer;
@@ -67,6 +21,7 @@ class TimerService extends StateNotifier<TimerState> {
   late bool _isLongBreak;
   late int _sessionsUntilLongBreak;
   late SharedPreferences _prefs;
+  final VoidCallback? onStatsUpdated;
 
   int get workDuration => _workDuration;
   int get shortBreakDuration => _shortBreakDuration;
@@ -77,7 +32,7 @@ class TimerService extends StateNotifier<TimerState> {
   bool get isLongBreak => _isLongBreak;
   int get sessionsUntilLongBreak => _sessionsUntilLongBreak;
 
-  TimerService() : super(TimerState(
+  TimerService({this.onStatsUpdated}) : super(TimerState(
     completedSessions: 0,
     totalFocusTime: const Duration(),
     isRunning: false,
@@ -143,10 +98,12 @@ class TimerService extends StateNotifier<TimerState> {
       _sessionsUntilLongBreak = settings['sessionsUntilLongBreak'];
       
       if (!state.isRunning) {
+        final newDuration = Duration(
+          seconds: _isBreakTime ? _shortBreakDuration : _workDuration
+        );
         state = state.copyWith(
-          currentDuration: Duration(
-            seconds: _isBreakTime ? _shortBreakDuration : _workDuration
-          ),
+          currentDuration: newDuration,
+          totalDuration: newDuration,
         );
       }
     } catch (e) {
@@ -168,6 +125,16 @@ class TimerService extends StateNotifier<TimerState> {
       state = state.copyWith(
         currentDuration: Duration(seconds: state.currentDuration.inSeconds - 1),
       );
+      
+      // Update desktop overlay with current timer status
+      if (Platform.isWindows || Platform.isMacOS) {
+        final minutes = state.currentDuration.inMinutes;
+        final seconds = state.currentDuration.inSeconds % 60;
+        final timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        final sessionType = state.isBreak ? (state.isLongBreak ? 'Long Break' : 'Break') : 'Focus';
+        
+        DesktopOverlayService.updateSystemTray('$sessionType $timerText', state.isRunning);
+      }
     } else {
       _timer?.cancel();
       _completeSession();
@@ -178,12 +145,32 @@ class TimerService extends StateNotifier<TimerState> {
     if (!state.isRunning) {
       _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
       state = state.copyWith(isRunning: true);
+      
+      // Update desktop overlay when timer starts
+      if (Platform.isWindows || Platform.isMacOS) {
+        final minutes = state.currentDuration.inMinutes;
+        final seconds = state.currentDuration.inSeconds % 60;
+        final timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+        final sessionType = state.isBreak ? (state.isLongBreak ? 'Long Break' : 'Break') : 'Focus';
+        
+        DesktopOverlayService.updateSystemTray('$sessionType $timerText', true);
+      }
     }
   }
 
   void pauseTimer() {
     _timer?.cancel();
     state = state.copyWith(isRunning: false);
+    
+    // Update desktop overlay when timer pauses
+    if (Platform.isWindows || Platform.isMacOS) {
+      final minutes = state.currentDuration.inMinutes;
+      final seconds = state.currentDuration.inSeconds % 60;
+      final timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      final sessionType = state.isBreak ? (state.isLongBreak ? 'Long Break' : 'Break') : 'Focus';
+      
+      DesktopOverlayService.updateSystemTray('$sessionType $timerText', false);
+    }
   }
 
   Future<void> _completeSession() async {
@@ -208,6 +195,9 @@ class TimerService extends StateNotifier<TimerState> {
         _isLongBreak = needsLongBreak;
         
         await savePreferences();
+        
+        // Notify that stats have been updated
+        onStatsUpdated?.call();
       }
       
       _isBreakTime = !_isBreakTime;
@@ -316,6 +306,15 @@ class TimerService extends StateNotifier<TimerState> {
       isBreak: false,
       isLongBreak: false,
     );
+    
+    // Update desktop overlay when timer resets
+    if (Platform.isWindows || Platform.isMacOS) {
+      final minutes = state.currentDuration.inMinutes;
+      final seconds = state.currentDuration.inSeconds % 60;
+      final timerText = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+      
+      DesktopOverlayService.updateSystemTray('Focus $timerText', false);
+    }
   }
 
   void nextMode() {
@@ -373,4 +372,4 @@ class TimerService extends StateNotifier<TimerState> {
     savePreferences();
     super.dispose();
   }
-} 
+}

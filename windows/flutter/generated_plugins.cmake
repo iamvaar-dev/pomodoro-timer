@@ -5,6 +5,8 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   bitsdojo_window_windows
+  screen_retriever
+  system_tray
   window_size
   windows_notification
 )

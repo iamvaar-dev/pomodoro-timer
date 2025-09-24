@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:bitsdojo_window/bitsdojo_window.dart';
 import '../widgets/timer_display.dart';
 import '../widgets/control_buttons.dart';
 import '../widgets/stats_card.dart';
@@ -15,124 +14,210 @@ class HomeScreen extends ConsumerWidget {
     final timerState = ref.watch(timerServiceProvider);
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(48),
-        child: WindowTitleBarBox(
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.1),
-                ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              Theme.of(context).colorScheme.secondary.withOpacity(0.03),
+              Theme.of(context).colorScheme.tertiary.withOpacity(0.02),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Welcome header
+                  _buildWelcomeHeader(context),
+                  const SizedBox(height: 32),
+                  
+                  // Timer section
+                  _buildTimerSection(context),
+                  const SizedBox(height: 32),
+                  
+                  // Quick stats
+                  _buildQuickStats(context, timerState),
+                  const SizedBox(height: 32),
+                  
+                  // Tasks section
+                  _buildTasksSection(context),
+                  const SizedBox(height: 100), // Bottom padding for nav bar
+                ],
               ),
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                Expanded(
-                  child: MoveWindow(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'FocusForge',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                _buildHeaderButton(
-                  context,
-                  Icons.settings_outlined,
-                  'Settings',
-                  () => Navigator.pushNamed(context, '/settings'),
-                ),
-                _buildHeaderButton(
-                  context,
-                  Icons.bar_chart,
-                  'Statistics',
-                  () => Navigator.pushNamed(context, '/stats'),
-                ),
-                const SizedBox(width: 8),
-                const WindowButtons(),
-              ],
             ),
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    );
+  }
+
+  Widget _buildWelcomeHeader(BuildContext context) {
+    final hour = DateTime.now().hour;
+    String greeting;
+    IconData greetingIcon;
+    
+    if (hour < 12) {
+      greeting = 'Good Morning';
+      greetingIcon = Icons.wb_sunny;
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+      greetingIcon = Icons.wb_sunny_outlined;
+    } else {
+      greeting = 'Good Evening';
+      greetingIcon = Icons.nights_stay;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              greetingIcon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ready to focus?',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimerSection(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: const Column(
+        children: [
+          TimerDisplay(),
+          SizedBox(height: 24),
+          ControlButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStats(BuildContext context, timerState) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: StatsCard(
+        completedSessions: timerState.completedSessions,
+        totalFocusTime: timerState.totalFocusTime.inMinutes,
+      ),
+    );
+  }
+
+  Widget _buildTasksSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 16),
+          child: Row(
             children: [
-              const TimerDisplay(),
-              const SizedBox(height: 24),
-              const ControlButtons(),
-              const SizedBox(height: 24),
-              StatsCard(
-                completedSessions: timerState.completedSessions,
-                totalFocusTime: timerState.totalFocusTime.inMinutes,
+              Icon(
+                Icons.task_alt,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
               ),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 300,
-                child: const TaskList(),
+              const SizedBox(width: 8),
+              Text(
+                'Today\'s Tasks',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderButton(
-    BuildContext context,
-    IconData icon,
-    String tooltip,
-    VoidCallback onPressed,
-  ) {
-    return IconButton(
-      icon: Icon(icon, size: 20),
-      onPressed: onPressed,
-      tooltip: tooltip,
-      style: IconButton.styleFrom(
-        minimumSize: const Size(40, 40),
-        padding: EdgeInsets.zero,
-        foregroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-        hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      ),
-    );
-  }
-}
-
-class WindowButtons extends StatelessWidget {
-  const WindowButtons({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final buttonColors = WindowButtonColors(
-      iconNormal: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-      mouseOver: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      mouseDown: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-      iconMouseOver: Theme.of(context).colorScheme.primary,
-    );
-
-    final closeButtonColors = WindowButtonColors(
-      iconNormal: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-      mouseOver: Colors.red.withOpacity(0.1),
-      mouseDown: Colors.red.withOpacity(0.2),
-      iconMouseOver: Colors.red,
-    );
-
-    return Row(
-      children: [
-        MinimizeWindowButton(colors: buttonColors),
-        MaximizeWindowButton(colors: buttonColors),
-        CloseWindowButton(colors: closeButtonColors),
+        Container(
+          height: 320,
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).shadowColor.withOpacity(0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const ClipRRect(
+            borderRadius: BorderRadius.all(Radius.circular(20)),
+            child: TaskList(),
+          ),
+        ),
       ],
     );
   }
-} 
+}

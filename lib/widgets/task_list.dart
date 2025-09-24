@@ -56,9 +56,9 @@ class _TaskListState extends ConsumerState<TaskList> {
                       vertical: 12,
                     ),
                   ),
-                  onSubmitted: (value) {
+                  onSubmitted: (value) async {
                     if (value.isNotEmpty) {
-                      ref.read(taskProvider.notifier).addTask(value);
+                      await ref.read(taskProvider.notifier).addTask(value);
                       _controller.clear();
                     }
                   },
@@ -72,18 +72,18 @@ class _TaskListState extends ConsumerState<TaskList> {
                     final task = tasks[index];
                     return TaskItem(
                       task: task,
-                      onToggle: () {
-                        ref.read(taskProvider.notifier).toggleTask(task.id);
+                      onToggle: () async {
+                        await ref.read(taskProvider.notifier).toggleTask(task.id);
                         if (!task.isCompleted && 
                             tasks.where((t) => t.isCompleted).length == tasks.length - 1) {
                           _confettiController.play();
                         }
                       },
-                      onEdit: (newTitle) {
-                        ref.read(taskProvider.notifier).editTask(task.id, newTitle);
+                      onEdit: (newTitle) async {
+                        await ref.read(taskProvider.notifier).editTask(task.id, newTitle);
                       },
-                      onDelete: () {
-                        ref.read(taskProvider.notifier).removeTask(task.id);
+                      onDelete: () async {
+                        await ref.read(taskProvider.notifier).removeTask(task.id);
                       },
                     );
                   },
@@ -111,9 +111,9 @@ class _TaskListState extends ConsumerState<TaskList> {
 
 class TaskItem extends StatefulWidget {
   final Task task;
-  final VoidCallback onToggle;
-  final Function(String) onEdit;
-  final VoidCallback onDelete;
+  final Future<void> Function() onToggle;
+  final Future<void> Function(String) onEdit;
+  final Future<void> Function() onDelete;
 
   const TaskItem({
     super.key,
@@ -147,7 +147,7 @@ class _TaskItemState extends State<TaskItem> {
         child: ListTile(
           leading: Checkbox(
             value: widget.task.isCompleted,
-            onChanged: (_) => widget.onToggle(),
+            onChanged: (_) async => await widget.onToggle(),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
             ),
@@ -177,10 +177,11 @@ class _TaskItemState extends State<TaskItem> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, size: 20),
-                  onPressed: widget.onDelete,
+                  onPressed: () async => await widget.onDelete(),
                   tooltip: 'Delete Task',
                   style: IconButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
+                    hoverColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
                   ),
                 ),
               ],
@@ -211,9 +212,9 @@ class _TaskItemState extends State<TaskItem> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               if (controller.text.isNotEmpty) {
-                widget.onEdit(controller.text);
+                await widget.onEdit(controller.text);
                 Navigator.pop(context);
               }
             },
@@ -223,4 +224,4 @@ class _TaskItemState extends State<TaskItem> {
       ),
     );
   }
-} 
+}

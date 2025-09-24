@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/timer_provider.dart';
+import '../providers/stats_provider.dart';
 
 class StatsDisplay extends ConsumerWidget {
   const StatsDisplay({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final timerState = ref.watch(timerServiceProvider);
+    final todayStatsAsync = ref.watch(todayStatsProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -36,26 +36,70 @@ class StatsDisplay extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  icon: Icons.timer,
-                  label: 'Focus Time',
-                  value: '${(timerState.totalFocusTime.inMinutes / 60).toStringAsFixed(1)}h',
+          todayStatsAsync.when(
+            data: (stats) => Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.timer,
+                    label: 'Focus Time',
+                    value: '${(stats.focusMinutes / 60).toStringAsFixed(1)}h',
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  icon: Icons.check_circle_outline,
-                  label: 'Sessions',
-                  value: timerState.completedSessions.toString(),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.check_circle_outline,
+                    label: 'Sessions',
+                    value: stats.completedSessions.toString(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            loading: () => Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.timer,
+                    label: 'Focus Time',
+                    value: '0.0h',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.check_circle_outline,
+                    label: 'Sessions',
+                    value: '0',
+                  ),
+                ),
+              ],
+            ),
+            error: (error, stack) => Row(
+              children: [
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.timer,
+                    label: 'Focus Time',
+                    value: 'Error',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildStatCard(
+                    context,
+                    icon: Icons.check_circle_outline,
+                    label: 'Sessions',
+                    value: 'Error',
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -103,4 +147,4 @@ class StatsDisplay extends ConsumerWidget {
       ),
     );
   }
-} 
+}
