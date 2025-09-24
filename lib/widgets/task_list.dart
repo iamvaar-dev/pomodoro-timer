@@ -129,67 +129,99 @@ class TaskItem extends StatefulWidget {
 
 class _TaskItemState extends State<TaskItem> {
   bool _isHovered = false;
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-          ),
-        ),
-        child: ListTile(
-          leading: Checkbox(
-            value: widget.task.isCompleted,
-            onChanged: (_) async => await widget.onToggle(),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: () => _showEditDialog(context),
+        onLongPress: () => _showDeleteConfirmation(context),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: _isPressed 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
             ),
+            boxShadow: _isPressed ? [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ] : null,
           ),
-          title: Text(
-            widget.task.title,
-            style: TextStyle(
-              decoration: widget.task.isCompleted ? TextDecoration.lineThrough : null,
-              color: widget.task.isCompleted 
-                ? Theme.of(context).colorScheme.outline
-                : Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          trailing: AnimatedOpacity(
-            opacity: _isHovered ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, size: 20),
-                  onPressed: () => _showEditDialog(context),
-                  tooltip: 'Edit Task',
-                  style: IconButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.primary,
+          child: ListTile(
+            leading: GestureDetector(
+              onTap: () async => await widget.onToggle(),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: widget.task.isCompleted 
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+                  border: Border.all(
+                    color: widget.task.isCompleted 
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outline,
+                    width: 2,
                   ),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete, size: 20),
-                  onPressed: () async => await widget.onDelete(),
-                  tooltip: 'Delete Task',
-                  style: IconButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                    hoverColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
-                  ),
-                ),
-              ],
+                child: widget.task.isCompleted
+                  ? Icon(
+                      Icons.check,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    )
+                  : null,
+              ),
             ),
+            title: Text(
+              widget.task.title,
+              style: TextStyle(
+                decoration: widget.task.isCompleted ? TextDecoration.lineThrough : null,
+                color: widget.task.isCompleted 
+                  ? Theme.of(context).colorScheme.outline
+                  : Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            trailing: _buildTrailingWidget(context),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTrailingWidget(BuildContext context) {
+    // Show delete button on desktop when hovered, always show on mobile
+    final bool showButtons = _isHovered || Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS;
+    
+    if (showButtons) {
+      // Only show delete button - tap task to edit
+      return IconButton(
+        icon: const Icon(Icons.delete, size: 20),
+        onPressed: () => _showDeleteConfirmation(context),
+        tooltip: 'Delete Task',
+        style: IconButton.styleFrom(
+          foregroundColor: Theme.of(context).colorScheme.error,
+          hoverColor: Theme.of(context).colorScheme.error.withOpacity(0.1),
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
   }
 
   Future<void> _showEditDialog(BuildContext context) async {
@@ -219,6 +251,32 @@ class _TaskItemState extends State<TaskItem> {
               }
             },
             child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Task'),
+        content: Text('Are you sure you want to delete "${widget.task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await widget.onDelete();
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
