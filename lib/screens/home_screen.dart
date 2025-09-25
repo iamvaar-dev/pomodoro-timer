@@ -177,47 +177,23 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildTasksSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 16),
-          child: Row(
-            children: [
-              Icon(
-                Icons.task_alt,
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Today\'s Tasks',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+    return Container(
+      height: 320,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).shadowColor.withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
-        ),
-        Container(
-          height: 320,
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).shadowColor.withOpacity(0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const ClipRRect(
-            borderRadius: BorderRadius.all(Radius.circular(20)),
-            child: TaskList(),
-          ),
-        ),
-      ],
+        ],
+      ),
+      child: const ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+        child: TaskList(),
+      ),
     );
   }
 }

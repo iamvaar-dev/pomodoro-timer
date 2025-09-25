@@ -5,6 +5,7 @@ import 'package:confetti/confetti.dart';
 import 'dart:math' show pi;
 import '../models/task.dart';
 import '../providers/task_provider.dart';
+import 'sync_status_widget.dart';
 
 class TaskList extends ConsumerStatefulWidget {
   const TaskList({super.key});
@@ -44,8 +45,8 @@ class _TaskListState extends ConsumerState<TaskList> {
         children: [
           Column(
             children: [
-              // Google Sync Header
-              _buildGoogleSyncHeader(context, isSignedIn, userEmail, isSyncing, syncStatus),
+              // Clean header with info button
+              _buildCleanHeader(context),
               
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -81,14 +82,14 @@ class _TaskListState extends ConsumerState<TaskList> {
                     return TaskItem(
                       task: task,
                       onToggle: () async {
-                        await ref.read(taskProvider.notifier).toggleTask(task.id);
+                        await ref.read(taskProvider.notifier).toggleTaskCompletion(task.id);
                         if (!task.isCompleted && 
                             tasks.where((t) => t.isCompleted).length == tasks.length - 1) {
                           _confettiController.play();
                         }
                       },
                       onEdit: (newTitle) async {
-                        await ref.read(taskProvider.notifier).editTask(task.id, newTitle);
+                        await ref.read(taskProvider.notifier).editTask(task.id, title: newTitle);
                       },
                       onDelete: () async {
                         await ref.read(taskProvider.notifier).removeTask(task.id);
@@ -116,203 +117,103 @@ class _TaskListState extends ConsumerState<TaskList> {
     );
   }
 
-  Widget _buildGoogleSyncHeader(BuildContext context, bool isSignedIn, String? userEmail, bool isSyncing, String syncStatus) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-          ),
-        ),
-      ),
-      child: Column(
+  Widget _buildCleanHeader(BuildContext context) {
+    final isSignedIn = ref.watch(isSignedInProvider);
+    final isSyncing = ref.watch(isSyncingProvider);
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Text(
+            'Today\'s Tasks',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.cloud_sync,
-                size: 20,
-                color: isSignedIn 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.outline,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isSignedIn ? 'Google Tasks Sync' : 'Google Tasks',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (isSignedIn && userEmail != null) ...[
-                      Text(
-                        userEmail,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ] else if (!isSignedIn && Platform.isIOS) ...[
-                      Text(
-                        'Authentication opens in Safari browser',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              if (isSyncing) ...[
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
+              // Sync status indicator (small)
+              if (isSignedIn) ...[
+                Icon(
+                  Icons.cloud_done,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
                 ),
                 const SizedBox(width: 8),
               ],
-              _buildActionButton(context, isSignedIn, isSyncing),
-            ],
-          ),
-          if (syncStatus.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  _getSyncStatusIcon(syncStatus),
-                  size: 14,
-                  color: _getSyncStatusColor(context, syncStatus),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    _getFriendlySyncStatus(syncStatus),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: _getSyncStatusColor(context, syncStatus),
-                    ),
+              // Manual sync button
+              if (isSignedIn) ...[
+                IconButton(
+                   onPressed: isSyncing ? null : () async {
+                     await ref.read(taskProvider.notifier).syncWithGoogle();
+                   },
+                  icon: isSyncing 
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      )
+                    : Icon(
+                        Icons.sync,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                  tooltip: isSyncing ? 'Syncing...' : 'Sync with Google Tasks',
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
                   ),
                 ),
+                const SizedBox(width: 4),
               ],
-            ),
-          ],
+              // Info button to open sync details
+              IconButton(
+                onPressed: () => _showSyncStatusModal(context),
+                icon: Icon(
+                  Icons.info_outline,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                ),
+                tooltip: 'Sync Status & Settings',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(
+                  minWidth: 32,
+                  minHeight: 32,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(BuildContext context, bool isSignedIn, bool isSyncing) {
-    final syncStatus = ref.watch(syncStatusProvider);
-    final hasScopeIssue = syncStatus.toLowerCase().contains('insufficient_scope') || 
-                         syncStatus.toLowerCase().contains('access was denied');
-    
-    if (isSignedIn) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Show re-auth button if there are scope issues
-          if (hasScopeIssue) ...[
-            IconButton(
-              onPressed: isSyncing ? null : () async {
-                 await ref.read(taskProvider.notifier).reAuthenticateWithGoogle();
-               },
-              icon: Icon(
-                Icons.refresh,
-                size: 20,
-                color: isSyncing 
-                  ? Theme.of(context).colorScheme.outline
-                  : Theme.of(context).colorScheme.secondary,
-              ),
-              tooltip: 'Re-authenticate for Tasks access',
-            ),
-          ] else ...[
-            IconButton(
-              onPressed: isSyncing ? null : () async {
-                await ref.read(taskProvider.notifier).syncWithGoogle();
-              },
-              icon: Icon(
-                Icons.sync,
-                size: 20,
-                color: isSyncing 
-                  ? Theme.of(context).colorScheme.outline
-                  : Theme.of(context).colorScheme.primary,
-              ),
-              tooltip: 'Sync with Google Tasks',
-            ),
-          ],
-          IconButton(
-            onPressed: isSyncing ? null : () async {
-              await ref.read(taskProvider.notifier).signOutFromGoogle();
-            },
-            icon: Icon(
-              Icons.logout,
-              size: 20,
-              color: isSyncing 
-                ? Theme.of(context).colorScheme.outline
-                : Theme.of(context).colorScheme.error,
-            ),
-            tooltip: 'Sign out',
-          ),
-        ],
-      );
-    } else {
-      return ElevatedButton.icon(
-        onPressed: () async {
-          await ref.read(taskProvider.notifier).signInWithGoogle();
-        },
-        icon: Icon(Platform.isIOS ? Icons.open_in_browser : Icons.login, size: 16),
-        label: Text(Platform.isIOS ? 'Sign In (Safari)' : 'Sign In'),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          textStyle: Theme.of(context).textTheme.bodySmall,
+  void _showSyncStatusModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      );
-    }
-  }
-
-  IconData _getSyncStatusIcon(String status) {
-    if (status.toLowerCase().contains('insufficient_scope') || 
-        status.toLowerCase().contains('access was denied')) {
-      return Icons.warning_amber_outlined;
-    } else if (status.toLowerCase().contains('error') || status.toLowerCase().contains('failed')) {
-      return Icons.error_outline;
-    } else if (status.toLowerCase().contains('success') || status.toLowerCase().contains('synced')) {
-      return Icons.check_circle_outline;
-    } else if (status.toLowerCase().contains('syncing')) {
-      return Icons.sync;
-    } else {
-      return Icons.info_outline;
-    }
-  }
-
-  Color _getSyncStatusColor(BuildContext context, String status) {
-    if (status.toLowerCase().contains('insufficient_scope') || 
-        status.toLowerCase().contains('access was denied')) {
-      return Colors.orange;
-    } else if (status.toLowerCase().contains('error') || status.toLowerCase().contains('failed')) {
-      return Theme.of(context).colorScheme.error;
-    } else if (status.toLowerCase().contains('success') || status.toLowerCase().contains('synced')) {
-      return Theme.of(context).colorScheme.primary;
-    } else {
-      return Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
-    }
-  }
-
-  String _getFriendlySyncStatus(String status) {
-    if (status.toLowerCase().contains('insufficient_scope') || 
-        status.toLowerCase().contains('access was denied')) {
-      return 'Tasks access needed - tap refresh to re-authenticate';
-    }
-    return status;
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: SyncStatusWidget(),
+        ),
+      ),
+    );
   }
 }
 
