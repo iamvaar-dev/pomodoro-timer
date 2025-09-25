@@ -1,0 +1,6 @@
+// Google Service Configuration
+// This file is generated automatically - do not edit manually
+// Generated from .env file on Thu Sep 25 18:05:58 IST 2025
+
+GOOGLE_IOS_CLIENT_ID = 143907042420-ignd4o8h8t8590k5h634ma988sebdfjk.apps.googleusercontent.com
+GOOGLE_IOS_REVERSED_CLIENT_ID = com.googleusercontent.apps.143907042420-ignd4o8h8t8590k5h634ma988sebdfjk

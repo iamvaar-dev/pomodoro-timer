@@ -52,6 +52,12 @@ dependencies:
 
   confetti: ^0.7.0
   uuid: ^3.0.7
+  
+  # Google Authentication and Tasks API
+  google_sign_in: ^6.2.1
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +88,7 @@ flutter:
     - assets/logo.png
     - assets/sounds/focus_complete.mp3
     - assets/sounds/break_complete.mp3
+    - .env
 
 msix_config:
   display_name: Focus Forge

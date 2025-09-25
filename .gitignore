@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment variables (contains OAuth credentials)
+.env
+
 # IntelliJ related
 *.iml
 *.ipr

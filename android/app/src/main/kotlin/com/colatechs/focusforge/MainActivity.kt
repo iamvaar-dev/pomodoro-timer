@@ -1,4 +1,4 @@
-package com.example.focusforge
+package com.colatechs.focusforge
 
 import io.flutter.embedding.android.FlutterActivity
 
